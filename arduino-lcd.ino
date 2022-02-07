@@ -121,7 +121,6 @@ class _4bitLCD {
     int incrementCursor(void){
       this->cursor.y++;
       //this->_8bitWriteInstruction(CRS_INC);
-      return 1; // da, logic ca e temporar aici, doar nu-s dobitoc
 
       if(this->cursor.y == 16){
         if(this->cursor.x)
@@ -179,23 +178,30 @@ class _4bitLCD {
     void moveCursor(int x, int y){
       if(x < 0 || x > 1 || y < 0 || y > 15) return;
 
-      int n = abs(this->cursor.y - y);
+      int dist;
       INSTRUCTIONS instr;
 
-      if(this->cursor.x != x)
-        n += 32 + this->cursor.y;
+      if(this->cursor.x != x){
+        dist = 24;
 
-      if((this->cursor.y > y && this->cursor.x == x) || this->cursor.x > x)
-        instr = CRS_DEC;
-      else
-        instr = CRS_INC;
-
-      while(n--){
-        this->_8bitWriteInstruction(instr);
+        if(this->cursor.x < x)
+          dist += 15 - this->cursor.y + y + 1;
+        else
+          dist += 15 - y + this->cursor.y + 1;
       }
+      else
+          dist = abs(this->cursor.y - y);
+
+      if((this->cursor.y < y && this->cursor.x == x) || this->cursor.x < x)
+        instr = CRS_INC;
+      else
+        instr = CRS_DEC;
+
+        while(dist--)
+         this->_8bitWriteInstruction(instr);
       
-      this->cursor.x = x;
-      this->cursor.y = y;
+        this->cursor.x = x;
+        this->cursor.y = y;
     }
 };
 
@@ -213,7 +219,11 @@ void setup(){
 
 void loop() {
   delay(20);
-  lcd.moveCursor(0, 5);
+  lcd.moveCursor(1, 5);
   delay(3000);
   lcd.print("123");
+  delay(4000);
+  lcd.moveCursor(0, 9);
+  lcd.print("123");
+  delay(3000);
 }
