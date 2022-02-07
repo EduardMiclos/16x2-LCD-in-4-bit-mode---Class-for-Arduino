@@ -6,8 +6,7 @@ class _4bitLCD {
   int RS_PIN, RW_PIN, ENABLE_PIN;
   int DATA_PINS[4];
 
-  #define ENABLE_DELAY_TIME 5 /* ms */
-  #define ABS(A) ((A) * (A))
+  #define ENABLE_DELAY_TIME 5 /* ms */  
 
   typedef enum {INSTRUCTION = LOW, DATA = HIGH} REGISTER_TYPE;
   typedef enum {WRITE = LOW, READ = HIGH} OPERATION;
@@ -180,7 +179,7 @@ class _4bitLCD {
     void moveCursor(int x, int y){
       if(x < 0 || x > 1 || y < 0 || y > 15) return;
 
-      int n = ABS(this->cursor.y - y);
+      int n = abs(this->cursor.y - y);
       INSTRUCTIONS instr;
 
       if(this->cursor.x != x)
@@ -191,8 +190,9 @@ class _4bitLCD {
       else
         instr = CRS_INC;
 
-      while(n--)
+      while(n--){
         this->_8bitWriteInstruction(instr);
+      }
       
       this->cursor.x = x;
       this->cursor.y = y;
@@ -213,7 +213,7 @@ void setup(){
 
 void loop() {
   delay(20);
-  lcd.moveCursor(0, 2);
+  lcd.moveCursor(0, 5);
   delay(3000);
   lcd.print("123");
 }
