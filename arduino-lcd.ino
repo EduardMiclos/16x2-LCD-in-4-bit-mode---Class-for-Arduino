@@ -100,7 +100,7 @@ class _4bitLCD
       return True;
     }
 
-    /* Sets data mode on. Now the LCD received DATA. */
+    /* Sets data mode on. Now the LCD receives DATA. */
     Bool setDataMode(void)
     {
       this->regType = DATA;
