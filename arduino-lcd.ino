@@ -64,11 +64,6 @@ typedef enum
   CRS_DEC = 0x10 /* decrement cursor */
 } INSTRUCTIONS;
 
-/*
-IF UNKNOWN BEHAVIOUR REGARDING DISPLAY: 
-TRY SENDING THE 0x6 INSTRUCTION (SETS THE CURSOR MOVE DIRECTION)
-*/
-
 /* A struct that defines the cursor position. */
 typedef struct
 {
@@ -191,18 +186,6 @@ class _4bitLCD
 
     Bool _8bitWriteString(String strOutputText)
     {
-
-      // if(this->cursor.uiColIdx == LCD_COL_MAX)
-      // {
-      //   if(this->cursor.uiRowIdx != LCD_ROW_MAX)
-      //   { 
-      //     this->moveCursor(this->cursor.uiRowIdx + 1, LCD_COL_MIN);
-      //   }
-      // }
-      // else
-      // {
-      //     /* TBE. */
-      // }
 
       if(regType != DATA)
       {
@@ -416,7 +399,21 @@ class _4bitLCD
       {
         return 0;
       }
-        
+
+      Bool _8bitWriteInstruction_returnValue;
+      if((iTargetRowIdx == 0) && (iTargetColIdx == 0))
+      {
+        _8bitWriteInstruction_returnValue = this->_8bitWriteInstruction(CRS_HOME);
+        if(_8bitWriteInstruction_returnValue != True)
+        {
+          return 0;
+        }
+        else
+        {
+        return 1;
+        }
+      }
+
       int iDistanceToTraverse;
       int iUnusedLocations = TOTAL_ENTRIES_ROW - ROW_DIM;
       INSTRUCTIONS instruction;
@@ -456,10 +453,16 @@ class _4bitLCD
       }
 
       iDistanceToTraverse = iDistanceToTraverse - 1;
+
       while(iDistanceToTraverse >= 0)
       {
         iDistanceToTraverse = iDistanceToTraverse - 1;
-        this->_8bitWriteInstruction(instruction);
+        _8bitWriteInstruction_returnValue = this->_8bitWriteInstruction(instruction);
+
+        if(_8bitWriteInstruction_returnValue != True)
+        {
+          return False;
+        }
       }
       
       this->cursor.uiRowIdx = iTargetRowIdx;
@@ -481,27 +484,12 @@ void setup(){
   lcd.begin();
 }
 
-/*
-
-1. moveCursor(x, y) functioneaza perfect.
-2. Urmeaza sa vedem la lcd.print(str);
-
-*/ 
-
 void loop() {
   delay(20);
- // lcd.moveCursor(1, 5);
- // delay(3000);
-  //lcd.moveCursor(0, 9);
-  delay(6000);
-  //lcd.moveCursor(0, 0);
-  // delay(3000);
-  // lcd.moveCursor(0, 4);
-  // delay(3000);
-  // lcd.moveCursor(1, 3);
-  // delay(3000);
-  // lcd.moveCursor(1, 6);
-  // delay(3000);
-  // lcd.moveCursor(0, 4);
-  lcd.print("Miclos Edi est cel mai tare!");
+  lcd.moveCursor(0, 3);
+  delay(2000);
+  lcd.moveCursor(1, 3);
+  delay(2000);
+  lcd.print("You shall pass.");
+  delay(1000);
 }
