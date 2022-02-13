@@ -8,42 +8,53 @@
 #define TRUE 1
 #define FALSE (!TRUE)
 
-/* Size of char. */
+/* Size of char and byte dimension. */
 #define SIZE_OF_CHAR sizeof(char)
+#define SIZE_OF_BYTE 8
 
 /* Dimensions. */
 #define ROW_DIM 16
 #define COL_DIM 2
-#define TOTAL_ENTRIES_ROW 40
+#define TOTAL_ENTRIES_ROW 40 
 
+
+/* Defining Bool values. */
 typedef enum
 {
   False = FALSE,
   True = TRUE
 } Bool;
 
+
 /* 16x2 LCD. */
 typedef enum
 {
   LCD_ROW_MIN = 0,
   LCD_ROW_MAX = (COL_DIM - 1),
+
   LCD_COL_MIN = 0,
   LCD_COL_MAX = (ROW_DIM - 1)
 } _4bitLCD_DISPLAY_DIMENSIONS;
 
+
+/* Values for RS pin of LCD. */
 typedef enum 
 {
   INSTRUCTION = LOW, 
   DATA = HIGH
 } _4bitLCD_REGISTER_TYPE;
 
+
+/* Values for RW pin of LCD. */
 typedef enum 
 {
   WRITE = LOW, 
   READ = HIGH
 } _4bitLCD_OPERATION;
 
+
 /* The values are taken from the LCD instruction table. */
+/* https://funduino.de/DL/1602LCD.pdf */
 typedef enum 
 {
   CLEAR_SCREEN = 0x01, /* clears the display */
@@ -53,12 +64,19 @@ typedef enum
   CRS_DEC = 0x10 /* decrement cursor */
 } INSTRUCTIONS;
 
+/*
+IF UNKNOWN BEHAVIOUR REGARDING DISPLAY: 
+TRY SENDING THE 0x6 INSTRUCTION (SETS THE CURSOR MOVE DIRECTION)
+*/
+
+/* A struct that defines the cursor position. */
 typedef struct
 {
   unsigned int uiRowIdx, uiColIdx;
 } _4bitLCD_CURSOR_POS;
 
-/* LCD with BUS length of 4 bits */
+
+/* LCD with BUS length of 4 bits. */
 class _4bitLCD 
 {
   private:
@@ -96,11 +114,10 @@ class _4bitLCD
       delay(ENABLE_DELAY_TIME);
       digitalWrite(this->uiENABLE_PIN, LOW);
       delay(ENABLE_DELAY_TIME);
-
       return True;
     }
 
-    /* Sets data mode on. Now the LCD received DATA. */
+    /* Sets data mode on. Now the LCD receives DATA. */
     Bool setDataMode(void)
     {
       this->regType = DATA;
@@ -127,16 +144,22 @@ class _4bitLCD
       return True;
     }
 
-    /* TBD: Validate char input. */
+    /* Sets read mode on. Now we can read DATA or INSTRUCTIONS to LCD, depending on RS pin. */
+    Bool setReadMode(void)
+    {
+      this->operation = READ;
+      digitalWrite(this->uiRW_PIN, READ);
+    }
+
     /* Writes an 8 bit value to the LCD, using the nibble method (4 bit LCD). */
     Bool _8bitWriteChar(char c)
     {
       int iItr;
-      unsigned int uiCharSize = SIZE_OF_CHAR*8;
+      unsigned int uiCharSizeInBits = SIZE_OF_CHAR * SIZE_OF_BYTE;
       
       for(iItr = 0; iItr < DATA_PINS_NUM; iItr = iItr + 1)
       {
-        digitalWrite(this->arruiDATA_PINS[DATA_PINS_NUM - 1 - iItr], ((c) >> (uiCharSize - 1 - iItr)) & (1));
+        digitalWrite(this->arruiDATA_PINS[DATA_PINS_NUM - 1 - iItr], ((c) >> (uiCharSizeInBits - 1 - iItr)) & (1));
       }
 
       Bool enableData_ReturnValue;
@@ -163,31 +186,23 @@ class _4bitLCD
         }
       }
 
-      return True;
+      return False;
     }
 
-    /* TBD: Validate string input. */
-    /* TBD: returnValue shall always contains new information about current state of the function (bit-wise). */
-    int _8bitWriteString(String strOutputText)
+    Bool _8bitWriteString(String strOutputText)
     {
-      int returnValue = 1; // to be modified.
 
-      if(this->cursor.uiColIdx == LCD_COL_MAX)
-      {
-        if(this->cursor.uiRowIdx != LCD_ROW_MAX)
-        { 
-          this->moveCursor(this->cursor.uiRowIdx + 1, LCD_COL_MIN);
-        }
-        else
-        {
-          returnValue = 0;
-          return returnValue;
-        } 
-      }
-      else
-      {
-          /* TBE. */
-      }
+      // if(this->cursor.uiColIdx == LCD_COL_MAX)
+      // {
+      //   if(this->cursor.uiRowIdx != LCD_ROW_MAX)
+      //   { 
+      //     this->moveCursor(this->cursor.uiRowIdx + 1, LCD_COL_MIN);
+      //   }
+      // }
+      // else
+      // {
+      //     /* TBE. */
+      // }
 
       if(regType != DATA)
       {
@@ -196,15 +211,8 @@ class _4bitLCD
         {
           return False;
         }
-        else
-        {
-          /* TBE. */
-        }
       }
-      else
-      {
-        /* TBE */
-      }
+  
 
       if(this->operation != WRITE)
       {
@@ -213,15 +221,7 @@ class _4bitLCD
         {
           return False;
         }
-        else
-        {
-          /* TBE */
-        }
-      }
-      else
-      {
-        /* TBE */
-      }
+      }      
 
      for(char c : strOutputText)
      {
@@ -247,7 +247,8 @@ class _4bitLCD
         }
        }
       }
-      return returnValue;
+
+      return True;
     }
 
     Bool _8bitWriteInstruction(char c)
@@ -260,7 +261,7 @@ class _4bitLCD
           return False;
         }
       }
-      
+
       if(this->operation != WRITE)
       {
         Bool setWriteMode_ReturnValue = this->setWriteMode();
@@ -281,8 +282,10 @@ class _4bitLCD
     }
  
     Bool incrementCursor(void)
-    { 
-      if(this->cursor.uiColIdx == LCD_COL_MAX)
+    {
+      this->cursor.uiColIdx += 1;
+
+      if(this->cursor.uiColIdx == (LCD_COL_MAX + 1))
       {
         if(this->cursor.uiRowIdx != LCD_ROW_MAX)
         {
@@ -290,36 +293,30 @@ class _4bitLCD
         }
         else
         {
-          /* TBE. */
+          this->moveCursor(LCD_ROW_MIN, LCD_COL_MIN);
         }    
-      }
-      else
-      {
-        this->moveCursor(this->cursor.uiRowIdx, this->cursor.uiColIdx + 1);
-        /* TBE. */
       }
 
       return True;
     }
 
-    void decrementCursor(void)
+    Bool decrementCursor(void)
     {      
-      if(this->cursor.uiColIdx == LCD_COL_MIN)
+      this->cursor.uiColIdx -= 1;
+
+      if(this->cursor.uiColIdx == (LCD_COL_MIN - 1))
       {
         if(this->cursor.uiRowIdx != LCD_ROW_MIN)
         {
-        this->moveCursor(this->cursor.uiRowIdx - 1, LCD_COL_MIN);
+          this->moveCursor(this->cursor.uiRowIdx - 1, LCD_COL_MIN);
         }
         else
         {
-          /* TBE. */
+          this->moveCursor(LCD_ROW_MAX, LCD_COL_MAX);
         }    
       }
-      else
-      {
-        this->moveCursor(this->cursor.uiRowIdx, this->cursor.uiColIdx - 1);
-        /* TBE. */
-      }
+
+      return True;
     }
 
     Bool setPinsMode(void)
@@ -403,7 +400,8 @@ class _4bitLCD
 
     void print(String strOutputText)
     {
-      this->_8bitWriteString(strOutputText);
+      Bool returnValue_ignored;
+      returnValue_ignored = this->_8bitWriteString(strOutputText);
     }
 
     void clear()
@@ -414,19 +412,18 @@ class _4bitLCD
 
     int moveCursor(int iTargetRowIdx, int iTargetColIdx)
     {
-      if((iTargetRowIdx < LCD_ROW_MIN) || (iTargetRowIdx > LCD_ROW_MAX) || (iTargetColIdx < LCD_COL_MIN) || (iTargetColIdx > LCD_COL_MAX))
+      if((iTargetRowIdx < LCD_ROW_MIN) || (iTargetRowIdx > LCD_ROW_MAX) || (iTargetColIdx < LCD_COL_MIN) || (iTargetColIdx > TOTAL_ENTRIES_ROW))
       {
         return 0;
       }
         
       int iDistanceToTraverse;
-      int iInactivePins = TOTAL_ENTRIES_ROW - ROW_DIM;
+      int iUnusedLocations = TOTAL_ENTRIES_ROW - ROW_DIM;
       INSTRUCTIONS instruction;
-
 
       if(this->cursor.uiRowIdx != iTargetRowIdx)
       {
-        iDistanceToTraverse = iInactivePins;
+        iDistanceToTraverse = iUnusedLocations;
 
         if(this->cursor.uiRowIdx < iTargetRowIdx)
         {
@@ -459,7 +456,7 @@ class _4bitLCD
       }
 
       iDistanceToTraverse = iDistanceToTraverse - 1;
-      while(iDistanceToTraverse != 0)
+      while(iDistanceToTraverse >= 0)
       {
         iDistanceToTraverse = iDistanceToTraverse - 1;
         this->_8bitWriteInstruction(instruction);
@@ -484,11 +481,27 @@ void setup(){
   lcd.begin();
 }
 
+/*
+
+1. moveCursor(x, y) functioneaza perfect.
+2. Urmeaza sa vedem la lcd.print(str);
+
+*/ 
+
 void loop() {
   delay(20);
-  lcd.moveCursor(1, 5);
-  delay(3000);
-  lcd.moveCursor(0, 9);
-  lcd.print("123456789");
-  delay(3000);
+ // lcd.moveCursor(1, 5);
+ // delay(3000);
+  //lcd.moveCursor(0, 9);
+  delay(6000);
+  //lcd.moveCursor(0, 0);
+  // delay(3000);
+  // lcd.moveCursor(0, 4);
+  // delay(3000);
+  // lcd.moveCursor(1, 3);
+  // delay(3000);
+  // lcd.moveCursor(1, 6);
+  // delay(3000);
+  // lcd.moveCursor(0, 4);
+  lcd.print("Miclos Edi est cel mai tare!");
 }
